@@ -20,7 +20,8 @@ DECAY_RATE = 0.99 # Gamma. From exs.
 
 TAU = 0.01 # Weights for soft target CNN update. From exs
 
-SMALL_PRINT = 1
+# SMALL_PRINT = 1
+SMALL_PRINT = 10
 
 
 class doubleDeepQ(object):

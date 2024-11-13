@@ -18,15 +18,17 @@ EPSILON_DECAY = 30000 # Decay rate of exploration probability
 
 # MIN_OBSERVATION = 5000 # Number of required states before starting to train
 # TOT_OBSERVATION = 1000000 # Number of training states.
+# SAVE_OBSERVATION = 10000 # Number of observations after which to save model (for intermediate progress saving)
 # Rather than use these...
 # -- Tot frames is passed in. Don't need constant for that
 # -- Calculate min_observatin and save_observation
 MIN_O_DIV = 20 # Divides tot_frames to determine after which observation to start minibatch
 SAVE_O_DIV = 10 # Divides tot_frames to determine after which observation to save intermittently
-SAVE_OBSERVATION = 10000 # Number of observations after which to save model (for intermediate progress saving)
-SMALL_PRINT = 1
-LARGE_PRINT = 10
 
+# SMALL_PRINT = 1
+# LARGE_PRINT = 10
+SMALL_PRINT = 10
+LARGE_PRINT = 1000
 
 """ General class for agent that plays an Atari game. """
 # Should work with any game
@@ -124,7 +126,7 @@ class AtariAgent(object):
                 self.deep_q.train(s_b, a_b, r_b, d_b, s_new_b, observation_num) # Train on minibatch
 
                 # Periodically save model (to avoid losing work)
-                if observation_num % SAVE_OBSERVATION == (SAVE_OBSERVATION-1):
+                if observation_num % save_observation == (save_observation-1):
                     print("...Saving model intermediately...")
                     self.deep_q.save_model(self.save_path)
             
