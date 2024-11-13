@@ -1,7 +1,11 @@
 import gymnasium as gym
+from gymnasium.wrappers import RecordVideo
 import ale_py
 import cv2
 import numpy as np
+import os
+import shutil
+from datetime import datetime
 
 from replay_queue import ReplayQueue
 from double_dQ import doubleDeepQ
@@ -36,11 +40,11 @@ class AtariAgent(object):
 
     #INIT: specify game and action space size
 
-    def __init__(self, game_name, num_actions, path_to_save_model):
+    def __init__(self, game_name, num_actions, path_to_save_model, how_to_render):
 
         self.save_path = path_to_save_model
 
-        self.env = gym.make(game_name, full_action_space=False) # Create the game gym env. Variable of the class. Only relevant actions
+        self.env = gym.make(game_name, render_mode = how_to_render, full_action_space=False) # Create the game gym env. Variable of the class. Only relevant actions
         self.env.reset()
 
         self.replay_queue = ReplayQueue(REPLAY_SIZE) # Create replay queue
@@ -137,6 +141,81 @@ class AtariAgent(object):
         # Save after training complete
         self.deep_q.save_model(self.save_path)
 
-    # will need SIMULATE
+    # SIMULATE: run game to Game Over once using current model (whether from training or load, more likely)
+    # Only save if reward above save_threshold
+    def simulate(self, vid_fold = "", vid_prefix = "", save = False, save_threshold = 0):
+
+        # Assumes model ALREADY LOADED
+
+        # CONSIDER RELOADING MODEL EVERY TIME TO ENSURE ONLY SAVING ONE EPISODE
+
+        # Initialize
+        done = False
+        tot_award = 0
+
+        if save: # Check if saving. If so, save video
+            temp_video_folder = "temp_video" # Temporary video folder, so can remove video if not agove threshold
+
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S") # Add timestamp to prefix for easy differentiation
+            vid_prefix = vid_prefix + "_" + timestamp + "_"
+
+            os.makedirs(temp_video_folder, exist_ok=True) # Make temp folder
+            self.env = RecordVideo(self.env, video_folder = temp_video_folder, name_prefix=vid_prefix, episode_trigger = lambda x: True) # Only one episode, so def save it
+            # CONSIDER E == 0 TO ONLY SAVE ONE EPISODE
+            # No name prefix rn
+        
+        self.env.reset()
+        self.env.render() # Show startup
+
+        # Run the game
+        while not done:
+
+            # Choose action using model
+            state = self.convert_process_buffer() # Get current state
+            predict_action = self.deep_q.predict_movement(state, 0)[0] # No exploration, and only keep action (not q)
+            
+            # Render and get result
+            self.env.render() #visualize
+            observation, reward, done, _, _ = self.env.step(predict_action)
+            tot_award += reward
+
+            # Update process buffer
+            self.process_buffer.append(observation)
+            self.process_buffer = self.process_buffer[1:] # Remove oldest image in process buffer
+        
+        print("Game over! Final score = ", tot_award) # Give final score
+
+        if save:
+            self.env.close() # save in temp folder
+            if tot_award >= save_threshold: # If satisfies threshold
+                if vid_fold: # If destination folder specified
+                    os.makedirs(vid_fold, exist_ok = True) # Make it (if not already there)
+
+                    for filename in os.listdir(temp_video_folder): # Go through all files in temp folder
+                        shutil.move(os.path.join(temp_video_folder, filename), vid_fold) # Move to permanent folder
+                
+                print("!!!")
+                print("!!!")
+                print("!!!")
+                print(f"Video saved. Reward was {tot_award}, which satisfies thresh = {save_threshold}")
+                print("!!!")
+                print("!!!")
+                print("!!!")
+            else: # Otherwise
+                print(f"Video NOT saved. Reward was only {tot_award}, which is BELOW thresh = {save_threshold}")
+            
+            shutil.rmtree(temp_video_folder) # Remove temp folder
+            print("~~~Supposedly just cleared temp folder~~~")
+    
+    # PLAY_AGENT: simulate for multiple episodes. Essentially a wrapper on simulate
+    def play_agent(self, episode_num = 1, v_f = "", v_p = "", sB = False, sT = 0):
+
+        # Simply call simulate for specified episode num
+        for i in range(episode_num):
+            print("...Running episode ", i+1)
+            self.simulate(vid_fold = v_f, vid_prefix=v_p, save=sB, save_threshold=sT)
+
+
+
 
     # May need MEAN
