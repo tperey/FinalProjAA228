@@ -6,6 +6,8 @@ import random
 import tensorflow as tf
 import cv2
 
+import GPUtil
+
 from replay_queue import ReplayQueue
 
 from tensorflow.keras.models import Sequential
@@ -105,26 +107,37 @@ class doubleDeepQ(object):
     def train(self, s_batch, a_batch, r_batch, d_batch, s_new_batch, obsv_num):
         
         batch_size = s_batch.shape[0] # Number of samples is first dim size of any input
-        targets = np.zeros((batch_size, self.num_actions)) # Initialize targets array
+        #targets = np.zeros((batch_size, self.num_actions)) # Initialize targets array
 
         # Compute targets according to DDQN algorithm (DeepMind Double Q 2015)
         # In general, targets are Q values updated per Q-learning algorithm
         # Computed using models, and DDQN specifies which model to use and when
 
+        # BATCH PROCESS TO MORE EFFECTIVELY USE GPUs
+        #print("Data type of s_batch:", s_batch.dtype)
+        #print("Shape of s_batch:", s_batch.shape)
+        #s_batch = tf.expand_dims(s_batch, axis=1) # Reshape
+        #s_new_batch = tf.expand_dims(s_new_batch, axis=1) #Reshape
+        #print("~~~DID RESHAPE WITH TF~~~")
+        #print("Data type of s_batch:", s_batch.dtype)
+        #print("Shape of s_batch:", s_batch.shape)
+
+        q_curr_online = self.model.predict(s_batch, batch_size = 1, verbose = 0) # Initialize to current model predictions, for unseen actions
+        # Ensures Q values for unseen (s,a) pairs unchanged as desired
+
+        # Per DDQN, use online CNN to determine best next action (a giving max Q for s_new)
+        q_next_online = self.model.predict(s_new_batch, batch_size = 1, verbose = 0)
+        best_next_actions = np.argmax(q_next_online, axis = 1) # Get optimal actions across samples
+
+        # Per DDQN, evaluate Q of next state with target CNN
+        fut_q = self.target_model.predict(s_new_batch, batch_size = 1, verbose = 0)
+
+        targets = q_curr_online.copy()
         for i in range(batch_size): # For each state in batch, update targets
-            targets[i] = self.model.predict(s_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0) # Initialize to current model predictions, for unseen actions
-            # Ensures Q values for unseen (s,a) pairs unchanged as desired
-
-            # Per DDQN, use online CNN to determine best next action (a giving max Q for s_new)
-            best_next_action= np.argmax(self.model.predict(s_new_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0))
-
-            # Per DDQN, evaluate Q of next state with target CNN
-            fut_q = self.target_model.predict(s_new_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0)
-
             # Build up Q for ith observed (s,a) pair
             targets[i, a_batch[i]] = r_batch[i] # Add in reward
             if d_batch[i] == False: # Confirm NOT done (i.e. game over)
-                targets[i, a_batch[i]] += DECAY_RATE * fut_q[0, best_next_action] # Use Q assoc w/ best action above
+                targets[i, a_batch[i]] += DECAY_RATE * fut_q[i, best_next_actions[i]] # Use Q assoc w/ best action for sample i
 
         # Retrain
         loss = self.model.train_on_batch(s_batch, targets)
@@ -133,6 +146,7 @@ class doubleDeepQ(object):
         if obsv_num % SMALL_PRINT == 0:
             print("At iteration ", obsv_num, "Loss = ", loss)
             print("")
+            GPUtil.showUtilization() # Confirm using GPU memory
     
     # SAVE_MODEL: save DDQN model to file
     def save_model(self, path):
