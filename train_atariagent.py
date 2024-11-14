@@ -8,7 +8,7 @@ TOT_OBSERVATIONS = 10000
 
 game = "ALE/Breakout-v5"
 number_a = 4 # Check game documentation
-where_to_save = "breakout_saved.keras"
+where_to_save = "./adv_models/breakout_adv.keras"
 
 """ Comment in to confirm getting correct game """
 # # Create the game environment
@@ -35,5 +35,5 @@ where_to_save = "breakout_saved.keras"
 
 
 """ Train"""
-breakout_agent = AtariAgent(game, number_a, where_to_save)
+breakout_agent = AtariAgent(game, number_a, where_to_save, None)
 breakout_agent.train(TOT_OBSERVATIONS)

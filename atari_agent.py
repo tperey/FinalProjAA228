@@ -6,6 +6,7 @@ import numpy as np
 import os
 import shutil
 from datetime import datetime
+import csv
 
 from replay_queue import ReplayQueue
 from double_dQ import doubleDeepQ
@@ -17,8 +18,11 @@ MINIBATCH_SIZE = 32 # Number of samples to train on with each iteration. Paper u
 NUM_FRAMES = 4 # Number of frames stacked into single state input for training and experience replay. 4 was used in DeepMind paper
 
 INITIAL_EPSILON = 1.0 # Starting probability for e-greedy exploration
-FINAL_EPSILON = 0.01 # Final probability for exploration. TUNED from DeepMind
-EPSILON_DECAY = 30000 # Decay rate of exploration probability
+FINAL_EPSILON = 0.1 # Final probability for exploration. TUNED from DeepMind
+#EPSILON_DECAY = 300000 # Old decay rate that gave semi-decent policy after 4k iterations
+EPSILON_DECAY_FACTOR = 0.5 # Percentage of tot_frames at which to hit final_epsilon
+
+TAD_EPSILON = 0.01 # For use in simulation, to prevent getting stuck
 
 # MIN_OBSERVATION = 5000 # Number of required states before starting to train
 # TOT_OBSERVATION = 1000000 # Number of training states.
@@ -27,7 +31,8 @@ EPSILON_DECAY = 30000 # Decay rate of exploration probability
 # -- Tot frames is passed in. Don't need constant for that
 # -- Calculate min_observatin and save_observation
 MIN_O_DIV = 20 # Divides tot_frames to determine after which observation to start minibatch
-SAVE_O_DIV = 10 # Divides tot_frames to determine after which observation to save intermittently
+SAVE_O_DIV = 20 # Divides tot_frames to determine after which observation to save intermittently.
+# Save twice as often
 
 # SMALL_PRINT = 1
 # LARGE_PRINT = 10
@@ -40,9 +45,14 @@ class AtariAgent(object):
 
     #INIT: specify game and action space size
 
-    def __init__(self, game_name, num_actions, path_to_save_model, how_to_render):
+    def __init__(self, game_name, num_actions, path_to_save_model, how_to_render = 'human'):
 
         self.save_path = path_to_save_model
+
+        # Make a path for saving iteration, q-value
+        save_base, _ = self.save_path.rsplit(".", 1) # Get the front of the save file name
+        q_path = save_base + "_qlog.csv" # Add new ending
+        self.q_log_path = q_path
 
         self.env = gym.make(game_name, render_mode = how_to_render, full_action_space=False) # Create the game gym env. Variable of the class. Only relevant actions
         self.env.reset()
@@ -85,6 +95,7 @@ class AtariAgent(object):
         min_observation = tot_frames/MIN_O_DIV # Point at which to start minibatch training
         save_observation = tot_frames/SAVE_O_DIV # Point at which to intermittently save
 
+        epsilon_decay = EPSILON_DECAY_FACTOR*tot_frames # Get decay rate
 
         while observation_num < tot_frames: # Repeat for total training frames
 
@@ -93,7 +104,7 @@ class AtariAgent(object):
 
             """ DECAY LEARNING RATE"""
             if epsilon > FINAL_EPSILON:
-                epsilon -= (INITIAL_EPSILON-FINAL_EPSILON)/EPSILON_DECAY
+                epsilon -= (INITIAL_EPSILON-FINAL_EPSILON)/epsilon_decay
 
             """ EXECUTE STATE UPDATE """
             curr_state = self.convert_process_buffer() # Get current state (84, 84, NUM_FRAMES)
@@ -109,7 +120,12 @@ class AtariAgent(object):
                 done = done | temp_done # True if temp_done = 1 in any state
             
             if observation_num % SMALL_PRINT == 0: # Print q value every so many iterations
-                print("At iteration", observation_num, "q = ", predict_q_value)
+                print("At iteration", observation_num, "optimal q = ", predict_q_value)
+
+                # Save q values
+                with open(self.q_log_path, 'a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow([observation_num, predict_q_value])
 
             if done: # Handle game end
                 print("Game over! Lasted ", alive_frame, " frames")
@@ -128,11 +144,20 @@ class AtariAgent(object):
             if self.replay_queue.size() > min_observation: # Wait until replay reasonably full
                 s_b, a_b, r_b, d_b, s_new_b = self.replay_queue.sample(MINIBATCH_SIZE) # Sample minibatch
                 self.deep_q.train(s_b, a_b, r_b, d_b, s_new_b, observation_num) # Train on minibatch
+                
+                self.deep_q.target_train() # INTIIALLY FORGOT THIS!!!
 
                 # Periodically save model (to avoid losing work)
                 if observation_num % save_observation == (save_observation-1):
                     print("...Saving model intermediately...")
-                    self.deep_q.save_model(self.save_path)
+
+                    # Save in DIFF file
+                    base_path, keras_extension = self.save_path.rsplit(".", 1)
+                    modified_save_path = f"{base_path}_c{observation_num}.{keras_extension}"
+
+                    self.deep_q.save_model(modified_save_path)
+
+                    print("For ref, epsilon = ", epsilon)
             
             # Update trackers
             alive_frame += 1
@@ -148,6 +173,7 @@ class AtariAgent(object):
         # Assumes model ALREADY LOADED
 
         # CONSIDER RELOADING MODEL EVERY TIME TO ENSURE ONLY SAVING ONE EPISODE
+        #self.env = gym.make(game_name, render_mode = how_to_render, full_action_space=False)
 
         # Initialize
         done = False
@@ -160,20 +186,28 @@ class AtariAgent(object):
             vid_prefix = vid_prefix + "_" + timestamp + "_"
 
             os.makedirs(temp_video_folder, exist_ok=True) # Make temp folder
-            self.env = RecordVideo(self.env, video_folder = temp_video_folder, name_prefix=vid_prefix, episode_trigger = lambda x: True) # Only one episode, so def save it
+            self.env = RecordVideo(self.env, video_folder = temp_video_folder, name_prefix=vid_prefix, episode_trigger = lambda e: e==0) # Only one episode, so def save it
             # CONSIDER E == 0 TO ONLY SAVE ONE EPISODE
             # No name prefix rn
         
         self.env.reset()
         self.env.render() # Show startup
 
+        # # GET GAME STARTED - run one Action = 1 to make sure game starts running (if model predicts initial 0, it won't)
+        # self.env.render() #visualize
+        # observation, reward, done, _, _ = self.env.step(1)
+        # print("STARTUP")
+        # self.process_buffer.append(observation) # Make sure process buffer reflects initialization
+        # self.process_buffer = self.process_buffer[1:]
+
         # Run the game
         while not done:
 
             # Choose action using model
             state = self.convert_process_buffer() # Get current state
-            predict_action = self.deep_q.predict_movement(state, 0)[0] # No exploration, and only keep action (not q)
+            predict_action = self.deep_q.predict_movement(state, TAD_EPSILON)[0] # A little exploratio to prevent getting stuck, and only keep action (not q)
             
+            # print(predict_action) # For debugging only
             # Render and get result
             self.env.render() #visualize
             observation, reward, done, _, _ = self.env.step(predict_action)

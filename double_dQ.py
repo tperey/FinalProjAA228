@@ -30,6 +30,7 @@ class doubleDeepQ(object):
     def __init__(self, specific_n_a):
         self.num_actions = specific_n_a # Input num_actions (rather than constant) to make general (for any game)
         self.construct_q_network()
+        #tf.get_logger().setLevel('ERROR') # Don't print bars every time
     
     # CONSTRUCT_Q_NETWORK: construct both standard and TARGET CNNs for use in double Q learning
     def construct_q_network(self):
@@ -89,7 +90,7 @@ class doubleDeepQ(object):
     def predict_movement(self, data, epsilon):
         
         # Get Q values associated with state, and extract optimal action
-        q_actions = self.model.predict(data.reshape(1, 84, 84, NUM_FRAMES), batch_size = 1) # 'predict' expects BATCHES of samples (states), so reshape
+        q_actions = self.model.predict(data.reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0) # 'predict' expects BATCHES of samples (states), so reshape
         opt_action = np.argmax(q_actions) # Extract optimal action
 
         # With probability epsilon, choose random action
@@ -111,14 +112,14 @@ class doubleDeepQ(object):
         # Computed using models, and DDQN specifies which model to use and when
 
         for i in range(batch_size): # For each state in batch, update targets
-            targets[i] = self.model.predict(s_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1) # Initialize to current model predictions, for unseen actions
+            targets[i] = self.model.predict(s_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0) # Initialize to current model predictions, for unseen actions
             # Ensures Q values for unseen (s,a) pairs unchanged as desired
 
             # Per DDQN, use online CNN to determine best next action (a giving max Q for s_new)
-            best_next_action= np.argmax(self.model.predict(s_new_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1))
+            best_next_action= np.argmax(self.model.predict(s_new_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0))
 
             # Per DDQN, evaluate Q of next state with target CNN
-            fut_q = self.target_model.predict(s_new_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1)
+            fut_q = self.target_model.predict(s_new_batch[i].reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0)
 
             # Build up Q for ith observed (s,a) pair
             targets[i, a_batch[i]] = r_batch[i] # Add in reward
@@ -131,6 +132,7 @@ class doubleDeepQ(object):
         # Print loss every 10 iterations
         if obsv_num % SMALL_PRINT == 0:
             print("At iteration ", obsv_num, "Loss = ", loss)
+            print("")
     
     # SAVE_MODEL: save DDQN model to file
     def save_model(self, path):
@@ -150,7 +152,7 @@ class doubleDeepQ(object):
 
         for i in range(len(model_weights)): # for each weight
             # Soft update - heavily weight current target CNN weights, but add in lightly-weighted online CNN weights
-            target_weights[i] = TAU * model_weights[i] + (1 - TAU) * target_weights
+            target_weights[i] = TAU * model_weights[i] + (1 - TAU) * target_weights[i]
 
         self.target_model.set_weights(target_weights) # Update target model
 

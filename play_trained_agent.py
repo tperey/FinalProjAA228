@@ -5,18 +5,20 @@ from atari_agent import AtariAgent
 import os
 from datetime import datetime
 
+
 """ SET THESE TO CHOOSE WHICH GAME, AND WHICH MODEL """
 game = "ALE/Breakout-v5"
 number_a = 4 # Check game documentation
-model_path = "breakout_saved.keras" # Use for save_path and to load
+#model_path = "breakout_saved.keras" # Use for save_path and to load
+model_path = "./adv_models/old_breakout_adv_c999.keras"
 
-video_fold = "good_runs_111324"
-video_pref = "grun"
+video_fold = "oldAdv1k_goodruns"
+video_pref = "oA1_"
 
 saveBool = True
 
-save_thresh = 0
-num_trials = 1
+save_thresh = 1
+num_trials = 20
 
 """ Simulate 'n' save """
 breakout_agent = AtariAgent(game, number_a, model_path, 'rgb_array') # Instantiate

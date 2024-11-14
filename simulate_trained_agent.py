@@ -8,10 +8,13 @@ from datetime import datetime
 """ SET THESE TO CHOOSE WHICH GAME, AND WHICH MODEL """
 game = "ALE/Breakout-v5"
 number_a = 4 # Check game documentation
-model_path = "breakout_saved.keras" # Use for save_path and to load
+#model_path = "./adv_models/breakout_adv_c999.keras" # Use for save_path and to load
+model_path = "./adv_models/old_breakout_adv_c999.keras"
+#model_path = "breakout_saved.keras"
+
 
 video_fold = "test_out_saving"
-video_pref = "testrun"
+video_pref = "6k_failed_testrun"
 
 saveBool = False
 
