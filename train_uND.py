@@ -6,9 +6,9 @@ from atari_agent import AtariAgent
 # TOT_OBSERVATIONS = 20
 TOT_OBSERVATIONS = 10000
 
-game = "ALE/Breakout-v5"
-number_a = 4 # Check game documentation
-where_to_save = "./Bv3_models/bv3.keras"
+game = "ALE/UpNDown-v5"
+number_a = 6 # Check game documentation
+where_to_save = "./UNDv1_models/UNDv1.keras"
 
 """ Train """
 breakout_agent = AtariAgent(game, number_a, where_to_save, None)

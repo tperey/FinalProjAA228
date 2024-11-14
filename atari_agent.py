@@ -12,7 +12,8 @@ from replay_queue import ReplayQueue
 from double_dQ import doubleDeepQ
 
 # Constants and hyperparameters
-REPLAY_SIZE = 20000 # From exs. Paper used 1M
+# REPLAY_SIZE = 20000 # From exs. Paper used 1M.
+REPLAY_SIZE = 5000 # Empirically, Trevor's computer can't handle larger than this
 MINIBATCH_SIZE = 32 # Number of samples to train on with each iteration. Paper used 32
 
 NUM_FRAMES = 4 # Number of frames stacked into single state input for training and experience replay. 4 was used in DeepMind paper
