@@ -9,8 +9,11 @@ from datetime import datetime
 game = "ALE/Breakout-v5"
 number_a = 4 # Check game documentation
 #model_path = "./adv_models/breakout_adv_c999.keras" # Use for save_path and to load
-model_path = "./adv_models/old_breakout_adv_c999.keras"
+#model_path = "./adv_models/old_breakout_adv_c999.keras"
 #model_path = "breakout_saved.keras"
+#model_path = "./adv_models/breakout_adv_c7499.keras"
+#model_path = "./adv_models/breakout_adv_c6499.keras"
+model_path = "./adv_models/breakout_adv_c3499.keras"
 
 
 video_fold = "test_out_saving"

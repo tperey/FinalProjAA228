@@ -22,7 +22,7 @@ FINAL_EPSILON = 0.1 # Final probability for exploration. TUNED from DeepMind
 #EPSILON_DECAY = 300000 # Old decay rate that gave semi-decent policy after 4k iterations
 EPSILON_DECAY_FACTOR = 0.5 # Percentage of tot_frames at which to hit final_epsilon
 
-TAD_EPSILON = 0.01 # For use in simulation, to prevent getting stuck
+TAD_EPSILON = 0.1 # For use in simulation, to prevent getting stuck
 
 # MIN_OBSERVATION = 5000 # Number of required states before starting to train
 # TOT_OBSERVATION = 1000000 # Number of training states.
@@ -240,6 +240,8 @@ class AtariAgent(object):
             
             shutil.rmtree(temp_video_folder) # Remove temp folder
             print("~~~Supposedly just cleared temp folder~~~")
+        
+        return tot_award # Return final score
     
     # PLAY_AGENT: simulate for multiple episodes. Essentially a wrapper on simulate
     def play_agent(self, episode_num = 1, v_f = "", v_p = "", sB = False, sT = 0):
@@ -248,6 +250,28 @@ class AtariAgent(object):
         for i in range(episode_num):
             print("...Running episode ", i+1)
             self.simulate(vid_fold = v_f, vid_prefix=v_p, save=sB, save_threshold=sT)
+
+    # PLAY_AGENT: simulate for multiple episodes, and report average score
+    def get_mean_score(self, episode_num = 1, score_path = ""):
+
+        scores = np.zeros(episode_num) # Initialize vector for storing scores
+
+        # Simply call simulate for specified episode num
+        for i in range(episode_num):
+            ind_score = self.simulate() # Don't need any parameters, b/c not saving
+            
+            scores[i] = ind_score
+
+            if score_path: # Save to file, if specified
+                with open(score_path, 'a', newline='') as file:
+                    writer = csv.writer(file)
+                    writer.writerow([i, ind_score])
+                    print(" Saved score ", i+1, " = ", ind_score)
+        
+        # Get and report averge score
+        ave_score = np.mean(scores) 
+        print("AVERAGE score = ", ave_score)
+        
 
 
 
