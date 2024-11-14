@@ -13,8 +13,12 @@ from double_dQ import doubleDeepQ
 
 # Constants and hyperparameters
 # REPLAY_SIZE = 20000 # From exs. Paper used 1M.
-REPLAY_SIZE = 5000 # Empirically, Trevor's computer can't handle larger than this
+#REPLAY_SIZE = 5000 # Empirically, Trevor's computer can't handle larger than this
+REPLAY_SIZE = 1200 # Empirically, free Google cloud can't handle more than this
+
 MINIBATCH_SIZE = 32 # Number of samples to train on with each iteration. Paper used 32
+#MINIBATCH_SIZE = 64 # But, GPU can process more batches at once
+#MINIBATCH_SIZE = 128 # Slows down a lot
 
 NUM_FRAMES = 4 # Number of frames stacked into single state input for training and experience replay. 4 was used in DeepMind paper
 
