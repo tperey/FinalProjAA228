@@ -6,7 +6,7 @@ import random
 import tensorflow as tf
 import cv2
 
-import GPUtil
+#import GPUtil
 
 from replay_queue import ReplayQueue
 
@@ -146,7 +146,7 @@ class doubleDeepQ(object):
         if obsv_num % SMALL_PRINT == 0:
             print("At iteration ", obsv_num, "Loss = ", loss)
             print("")
-            GPUtil.showUtilization() # Confirm using GPU memory
+            #GPUtil.showUtilization() # Confirm using GPU memory
     
     # SAVE_MODEL: save DDQN model to file
     def save_model(self, path):

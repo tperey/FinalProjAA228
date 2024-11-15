@@ -7,19 +7,20 @@ from datetime import datetime
 
 
 """ SET THESE TO CHOOSE WHICH GAME, AND WHICH MODEL """
-game = "ALE/Breakout-v5"
-number_a = 4 # Check game documentation
+game = "ALE/UpNDown-v5"
+number_a = 6 # Check game documentation
 #model_path = "breakout_saved.keras" # Use for save_path and to load
 # model_path = "./adv_models/old_breakout_adv_c999.keras"
 #model_path = "./adv_models/breakout_adv_c6499.keras"
-model_path = "./adv_models/breakout_adv_c3999.keras"
+#model_path = "./adv_models/breakout_adv_c3999.keras"
+model_path = "./UNDv1_models/UNDv1_c4499.keras"
 
-video_fold = "Adv4k_goodruns"
-video_pref = "A4k_"
+video_fold = "UNDv1_goodruns"
+video_pref = "k45_UNDv1_"
 
 saveBool = True
 
-save_thresh = 1
+save_thresh = 1500
 num_trials = 20
 
 """ Simulate 'n' save """

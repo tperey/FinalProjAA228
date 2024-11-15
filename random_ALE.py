@@ -8,7 +8,9 @@ import csv
 from datetime import datetime
 import os
 
-game_name = "ALE/Breakout-v5" # Change to change game
+#game_name = "ALE/Breakout-v5" # Change to change game
+
+game_name = "ALE/UpNDown-v5" # Change to change game
 
 # Use to run one simulation
 def simulate_random(game_env):
@@ -43,7 +45,8 @@ scores = np.zeros(episode_num)
 for i in range(episode_num):
     scores[i] = simulate_random(env)
 
-    with open("random_scores.csv", 'a', newline='') as file:
+    score_path = game_name.split("/")[-1] + "_random_scores.csv"
+    with open(score_path, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([i, scores[i]])
         print(" Saved rand score ", i+1, " = ", scores[i])

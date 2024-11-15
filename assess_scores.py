@@ -8,13 +8,13 @@ from datetime import datetime
 
 
 """ SET THESE TO CHOOSE WHICH GAME, AND WHICH MODEL """
-game = "ALE/Breakout-v5"
-number_a = 4 # Check game documentation
+game = "ALE/UpNDown-v5"
+number_a = 6 # Check game documentation
 #model_path = "breakout_saved.keras" # Use for save_path and to load
 # model_path = "./adv_models/old_breakout_adv_c999.keras"
-model_path = "./adv_models/breakout_adv_c1499.keras"
+model_path = "./UNDv1_models/UNDv1_c4499.keras"
 
-scorePath = "scores_adv_c1499.csv"
+scorePath = "scores_UNDv1_c4499.csv"
 
 num_trials = 20
 

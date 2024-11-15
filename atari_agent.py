@@ -11,10 +11,13 @@ import csv
 from replay_queue import ReplayQueue
 from double_dQ import doubleDeepQ
 
+# EMPIRICALLY, with matrix improvements, code runs just as fast on Colab as your computer, basically
+# But, your computer ok with larger replay buffers, so lets do that
+
 # Constants and hyperparameters
 # REPLAY_SIZE = 20000 # From exs. Paper used 1M.
-#REPLAY_SIZE = 5000 # Empirically, Trevor's computer can't handle larger than this
-REPLAY_SIZE = 1200 # Empirically, free Google cloud can't handle more than this
+REPLAY_SIZE = 5000 # Empirically, Trevor's computer can't handle larger than this
+#REPLAY_SIZE = 1200 # Empirically, free Google cloud can't handle more than this
 
 MINIBATCH_SIZE = 32 # Number of samples to train on with each iteration. Paper used 32
 #MINIBATCH_SIZE = 64 # But, GPU can process more batches at once
