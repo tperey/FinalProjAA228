@@ -14,7 +14,7 @@ number_a = 6 # Check game documentation
 #model_path = "./adv_models/breakout_adv_c7499.keras"
 #model_path = "./adv_models/breakout_adv_c6499.keras"
 #model_path = "./adv_models/breakout_adv_c3499.keras"
-model_path = "./UNDv1_models/UNDv1_c4499.keras"
+model_path = "./UNDv3_models/UNDv3_c9999.keras"
 
 
 video_fold = "test_out_saving"

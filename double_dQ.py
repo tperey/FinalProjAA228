@@ -25,6 +25,8 @@ TAU = 0.01 # Weights for soft target CNN update. From exs
 # SMALL_PRINT = 1
 SMALL_PRINT = 10
 
+ADAM_CLIP = 1000000 # Just to prevent crashing
+
 
 class doubleDeepQ(object):
 
@@ -58,7 +60,7 @@ class doubleDeepQ(object):
         self.model.add(Dense(self.num_actions, activation = 'linear')) # Final layer. Output Q values for each action given state
 
         # Set training options - use MSE loss, ADAM optimizer with LEARN_RATE
-        self.model.compile(loss = 'mse', optimizer = Adam(learning_rate = LEARN_RATE))
+        self.model.compile(loss = 'mse', optimizer = Adam(learning_rate = LEARN_RATE, clipnorm= ADAM_CLIP))
 
 
 
@@ -92,7 +94,9 @@ class doubleDeepQ(object):
     def predict_movement(self, data, epsilon):
         
         # Get Q values associated with state, and extract optimal action
-        q_actions = self.model.predict(data.reshape(1, 84, 84, NUM_FRAMES), batch_size = 1, verbose = 0) # 'predict' expects BATCHES of samples (states), so reshape
+        data = tf.convert_to_tensor(data.reshape(1, 84, 84, NUM_FRAMES), dtype=tf.float32)
+        data = tf.ensure_shape(data, (1,84,84,NUM_FRAMES))
+        q_actions = self.model.predict(data, batch_size = 1, verbose = 0) # 'predict' expects BATCHES of samples (states), so reshape
         opt_action = np.argmax(q_actions) # Extract optimal action
 
         # With probability epsilon, choose random action
@@ -107,30 +111,26 @@ class doubleDeepQ(object):
     def train(self, s_batch, a_batch, r_batch, d_batch, s_new_batch, obsv_num):
         
         batch_size = s_batch.shape[0] # Number of samples is first dim size of any input
-        #targets = np.zeros((batch_size, self.num_actions)) # Initialize targets array
 
         # Compute targets according to DDQN algorithm (DeepMind Double Q 2015)
         # In general, targets are Q values updated per Q-learning algorithm
         # Computed using models, and DDQN specifies which model to use and when
 
-        # BATCH PROCESS TO MORE EFFECTIVELY USE GPUs
-        #print("Data type of s_batch:", s_batch.dtype)
-        #print("Shape of s_batch:", s_batch.shape)
-        #s_batch = tf.expand_dims(s_batch, axis=1) # Reshape
-        #s_new_batch = tf.expand_dims(s_new_batch, axis=1) #Reshape
-        #print("~~~DID RESHAPE WITH TF~~~")
-        #print("Data type of s_batch:", s_batch.dtype)
-        #print("Shape of s_batch:", s_batch.shape)
-
-        q_curr_online = self.model.predict(s_batch, batch_size = 1, verbose = 0) # Initialize to current model predictions, for unseen actions
+        # Convert to tensors, and ensure proper shape
+        s_batch = tf.convert_to_tensor(s_batch, dtype=tf.float32)
+        s_batch = tf.ensure_shape(s_batch, (batch_size, 84, 84, NUM_FRAMES))
+        s_new_batch = tf.convert_to_tensor(s_new_batch, dtype=tf.float32)
+        s_new_batch = tf.ensure_shape(s_new_batch, (batch_size, 84, 84, NUM_FRAMES))
+        
+        q_curr_online = self.model.predict(s_batch, verbose = 0) # Initialize to current model predictions, for unseen actions
         # Ensures Q values for unseen (s,a) pairs unchanged as desired
 
         # Per DDQN, use online CNN to determine best next action (a giving max Q for s_new)
-        q_next_online = self.model.predict(s_new_batch, batch_size = 1, verbose = 0)
-        best_next_actions = np.argmax(q_next_online, axis = 1) # Get optimal actions across samples
+        q_next_online = self.model.predict(s_new_batch, verbose = 0)
+        best_next_actions = tf.argmax(q_next_online, axis = 1) # Get optimal actions across samples
 
         # Per DDQN, evaluate Q of next state with target CNN
-        fut_q = self.target_model.predict(s_new_batch, batch_size = 1, verbose = 0)
+        fut_q = self.target_model.predict(s_new_batch, verbose = 0)
 
         targets = q_curr_online.copy()
         for i in range(batch_size): # For each state in batch, update targets
@@ -140,6 +140,7 @@ class doubleDeepQ(object):
                 targets[i, a_batch[i]] += DECAY_RATE * fut_q[i, best_next_actions[i]] # Use Q assoc w/ best action for sample i
 
         # Retrain
+        targets = tf.convert_to_tensor(targets, dtype=tf.float32)
         loss = self.model.train_on_batch(s_batch, targets)
 
         # Print loss every 10 iterations

@@ -3,6 +3,7 @@
 from collections import deque # Will store experiences in a deque (two-sided queue)
 import random
 import numpy as np
+import gc
 
 class ReplayQueue:
 
@@ -26,6 +27,7 @@ class ReplayQueue:
         else:
             # Otherwise, pop oldest experience and then add
             self.queue.popleft()
+            gc.collect() # Confirm got rid of old
             self.queue.append(experience)
     
 

@@ -8,7 +8,7 @@ TOT_OBSERVATIONS = 10000
 
 game = "ALE/UpNDown-v5"
 number_a = 6 # Check game documentation
-where_to_save = "./UNDv1_models/UNDv1.keras"
+where_to_save = "./UNDv3_models/UNDv3.keras"
 
 """ Train """
 breakout_agent = AtariAgent(game, number_a, where_to_save, None)

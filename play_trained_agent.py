@@ -13,10 +13,10 @@ number_a = 6 # Check game documentation
 # model_path = "./adv_models/old_breakout_adv_c999.keras"
 #model_path = "./adv_models/breakout_adv_c6499.keras"
 #model_path = "./adv_models/breakout_adv_c3999.keras"
-model_path = "./UNDv1_models/UNDv1_c4499.keras"
+model_path = "./UNDv3_models/UNDv3_c9999.keras"
 
-video_fold = "UNDv1_goodruns"
-video_pref = "k45_UNDv1_"
+video_fold = "UNDv3_goodruns"
+video_pref = "k9_UNDv3_"
 
 saveBool = True
 

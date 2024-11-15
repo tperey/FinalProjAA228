@@ -7,6 +7,12 @@ import os
 import shutil
 from datetime import datetime
 import csv
+from memory_profiler import memory_usage
+import pickle
+import gc
+import psutil
+import tensorflow as tf
+from tensorflow.keras import backend as K
 
 from replay_queue import ReplayQueue
 from double_dQ import doubleDeepQ
@@ -77,9 +83,14 @@ class AtariAgent(object):
             sc, rc, _, _, _ = self.env.step(0) # Just generate with NOOP
             self.process_buffer.append(sc)
     
-    # LOAD_DEEPQ: bring in existing deepQ model
-    def load_deepq(self, path):
-        self.deep_q.load_model(path) # Replace model with another model.
+    # LOAD_DEEPQ: bring in existing deepQ model and buffer for continuing training
+    def load_deepq(self, path_model, path_queue = ""):
+        self.deep_q.load_model(path_model) # Replace model with another model.
+        
+        if path_queue: # Load queue (if requested)
+            with open(path_queue,"rb") as f:
+                self.replay_queue = pickle.load(f)
+
         # Useful for picking up training where left off, or simulating after training
     
     # CONVERT_PROCESS_BUFFER: convert NUM_FRAMES images in process_buffer into a state
@@ -91,12 +102,12 @@ class AtariAgent(object):
         return np.concatenate(gray_buffer, axis = 2) # Stack frames
     
     # TRAIN: train agent in game itself for tot_frames
-    def train(self, tot_frames):
+    def train(self, tot_frames, start_eps = INITIAL_EPSILON):
 
         # Initialize
         observation_num = 0
         init_state = self.convert_process_buffer() # Whatever state in buffer when train called
-        epsilon = INITIAL_EPSILON
+        epsilon = start_eps
         alive_frame = 0
         total_reward = 0
 
@@ -143,19 +154,19 @@ class AtariAgent(object):
                 alive_frame = 0
                 total_reward = 0
             
+            # Append new state
             new_state = self.convert_process_buffer() # Just filled, so convert
             self.replay_queue.add(curr_state, predict_a, reward, done, new_state) # Add to replay
             total_reward += reward
 
-
             """ TRAIN - minibatch """
             if self.replay_queue.size() > min_observation: # Wait until replay reasonably full
+
                 s_b, a_b, r_b, d_b, s_new_b = self.replay_queue.sample(MINIBATCH_SIZE) # Sample minibatch
                 self.deep_q.train(s_b, a_b, r_b, d_b, s_new_b, observation_num) # Train on minibatch
-                
                 self.deep_q.target_train() # INTIIALLY FORGOT THIS!!!
 
-                # Periodically save model (to avoid losing work)
+                """ Periodically SAVE & CLEAN """
                 if observation_num % save_observation == (save_observation-1):
                     print("...Saving model intermediately...")
 
@@ -166,7 +177,27 @@ class AtariAgent(object):
                     self.deep_q.save_model(modified_save_path)
 
                     print("For ref, epsilon = ", epsilon)
-            
+
+                    # Clear and reload
+                    K.clear_session()
+                    self.deep_q.load_model(modified_save_path) # Load model just saved
+
+                    # ERROR LOGGING
+                    print("Mem:", memory_usage(-1, interval=1, timeout=1))
+                    print(len(self.replay_queue.queue)) # Doesn't require that you wrote your size function right
+                    print("Called garbage collection")
+                    gc.collect()
+
+                    memory_info = psutil.virtual_memory()
+                    print(f"Total memory: {memory_info.total / (1024 ** 3):.2f} GB")
+                    print(f"Available memory: {memory_info.available / (1024 ** 3):.2f} GB")
+                    print(f"Used memory: {memory_info.used / (1024 ** 3):.2f} GB")
+                    print(f"Memory usage: {memory_info.percent}%")
+
+                    # SAVE BUFFER IN CASE OF CRASH
+                    with open("replay_queue.pkl", "wb") as f:
+                        pickle.dump(self.replay_queue, f)
+
             # Update trackers
             alive_frame += 1
             observation_num += 1
