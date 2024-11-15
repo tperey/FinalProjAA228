@@ -283,12 +283,21 @@ class AtariAgent(object):
         return tot_award # Return final score
     
     # PLAY_AGENT: simulate for multiple episodes. Essentially a wrapper on simulate
-    def play_agent(self, episode_num = 1, v_f = "", v_p = "", sB = False, sT = 0):
+    def play_agent(self, episode_num = 1, v_f = "", v_p = "", sB = False, sT = 0, gS = False):
+
+        if gS:
+            scores = np.zeros(episode_num) # Initialize vector for storing scores
 
         # Simply call simulate for specified episode num
         for i in range(episode_num):
             print("...Running episode ", i+1)
-            self.simulate(vid_fold = v_f, vid_prefix=v_p, save=sB, save_threshold=sT)
+            last_score = self.simulate(vid_fold = v_f, vid_prefix=v_p, save=sB, save_threshold=sT)
+
+            if gS:
+                scores[i] = last_score
+        
+        if gS:
+            print("Average scores: ", np.mean(scores))
 
     # PLAY_AGENT: simulate for multiple episodes, and report average score
     def get_mean_score(self, episode_num = 1, score_path = ""):

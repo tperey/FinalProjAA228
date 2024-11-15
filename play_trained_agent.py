@@ -19,14 +19,15 @@ video_fold = "UNDv3_goodruns"
 video_pref = "k9_UNDv3_"
 
 saveBool = True
+getScores = True
 
-save_thresh = 1500
+save_thresh = 1000
 num_trials = 20
 
 """ Simulate 'n' save """
 breakout_agent = AtariAgent(game, number_a, model_path, 'rgb_array') # Instantiate
 breakout_agent.load_deepq(model_path)
-breakout_agent.play_agent(episode_num=num_trials, v_f=video_fold, v_p=video_pref, sB=saveBool, sT=save_thresh)
+breakout_agent.play_agent(episode_num=num_trials, v_f=video_fold, v_p=video_pref, sB=saveBool, sT=save_thresh, gS=getScores)
 
 #def play_agent(self, episode_num = 1, v_f = "", v_p = "", sB = False, sT = 0):
 #simulate(self, vid_fold = "", vid_prefix = "", save = False, save_threshold = 0):
