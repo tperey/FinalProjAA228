@@ -23,7 +23,7 @@ DECAY_RATE = 0.99 # Gamma. From exs.
 TAU = 0.01 # Weights for soft target CNN update. From exs
 
 # SMALL_PRINT = 1
-SMALL_PRINT = 10
+SMALL_PRINT = 100
 
 ADAM_CLIP = 1000000 # Just to prevent crashing
 

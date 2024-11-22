@@ -34,7 +34,7 @@ NUM_FRAMES = 4 # Number of frames stacked into single state input for training a
 INITIAL_EPSILON = 1.0 # Starting probability for e-greedy exploration
 FINAL_EPSILON = 0.1 # Final probability for exploration. TUNED from DeepMind
 #EPSILON_DECAY = 300000 # Old decay rate that gave semi-decent policy after 4k iterations
-EPSILON_DECAY_FACTOR = 0.5 # Percentage of tot_frames at which to hit final_epsilon
+EPSILON_DECAY_FACTOR = 0.1 # Percentage of tot_frames at which to hit final_epsilon
 
 TAD_EPSILON = 0.1 # For use in simulation, to prevent getting stuck
 
@@ -50,8 +50,8 @@ SAVE_O_DIV = 20 # Divides tot_frames to determine after which observation to sav
 
 # SMALL_PRINT = 1
 # LARGE_PRINT = 10
-SMALL_PRINT = 10
-LARGE_PRINT = 1000
+SMALL_PRINT_DIV = 200
+SPRSM_PRINT_DIV = 1000
 
 """ General class for agent that plays an Atari game. """
 # Should work with any game
@@ -112,14 +112,14 @@ class AtariAgent(object):
         total_reward = 0
 
         min_observation = tot_frames/MIN_O_DIV # Point at which to start minibatch training
+        print("Min obsv", min_observation)
         save_observation = tot_frames/SAVE_O_DIV # Point at which to intermittently save
+        sm_prnt = tot_frames/SMALL_PRINT_DIV
+        spr_sm_print = tot_frames/SPRSM_PRINT_DIV
 
         epsilon_decay = EPSILON_DECAY_FACTOR*tot_frames # Get decay rate
 
         while observation_num < tot_frames: # Repeat for total training frames
-
-            if observation_num % LARGE_PRINT == (LARGE_PRINT - 1): # Print every many frames
-                print("Executing loop ", observation_num)
 
             """ DECAY LEARNING RATE"""
             if epsilon > FINAL_EPSILON:
@@ -138,21 +138,55 @@ class AtariAgent(object):
                 self.process_buffer.append(temp_obsv) # Store new state in process buffer
                 done = done | temp_done # True if temp_done = 1 in any state
             
-            if observation_num % SMALL_PRINT == 0: # Print q value every so many iterations
+            """ TRACK AND CLEAN """
+            if observation_num % sm_prnt == 0: # Print q value every so many iterations
+                print("")
                 print("At iteration", observation_num, "optimal q = ", predict_q_value)
+
+                base_path, keras_extension = self.save_path.rsplit(".", 1)
+                running_save_path = f"{base_path}_running.{keras_extension}"
+
+                self.deep_q.save_model(running_save_path)
+
+                print("For ref, epsilon = ", epsilon)
+
+                # Clear and reload
+                K.clear_session()
+                self.deep_q.load_model(running_save_path) # Load model just saved
+
+                # ERROR LOGGING
+                print("Mem:", memory_usage(-1, interval=1, timeout=1))
+                print(len(self.replay_queue.queue)) # Doesn't require that you wrote your size function right
+                print("Called garbage collection")
+                gc.collect()
+
+                memory_info = psutil.virtual_memory()
+                print(f"Total memory: {memory_info.total / (1024 ** 3):.2f} GB")
+                print(f"Available memory: {memory_info.available / (1024 ** 3):.2f} GB")
+                print(f"Used memory: {memory_info.used / (1024 ** 3):.2f} GB")
+                print(f"Memory usage: {memory_info.percent}%")
+
+                # SAVE BUFFER IN CASE OF CRASH
+                with open("replay_queue.pkl", "wb") as f:
+                    pickle.dump(self.replay_queue, f)
 
                 # Save q values
                 with open(self.q_log_path, 'a', newline='') as file:
                     writer = csv.writer(file)
                     writer.writerow([observation_num, predict_q_value])
+                
+                print("")
 
+            """ PREP FOR NEXT STATE """
             if done: # Handle game end
+                print("")
                 print("Game over! Lasted ", alive_frame, " frames")
                 print("Earned total reward of ", total_reward)
                 self.env.reset() # Keep playing
 
                 alive_frame = 0
                 total_reward = 0
+                print("")
             
             # Append new state
             new_state = self.convert_process_buffer() # Just filled, so convert
@@ -160,7 +194,7 @@ class AtariAgent(object):
             total_reward += reward
 
             """ TRAIN - minibatch """
-            if self.replay_queue.size() > min_observation: # Wait until replay reasonably full
+            if self.replay_queue.size() > (min_observation-1): # Wait until replay reasonably full (5k)
 
                 s_b, a_b, r_b, d_b, s_new_b = self.replay_queue.sample(MINIBATCH_SIZE) # Sample minibatch
                 self.deep_q.train(s_b, a_b, r_b, d_b, s_new_b, observation_num) # Train on minibatch
@@ -168,7 +202,14 @@ class AtariAgent(object):
 
                 """ Periodically SAVE & CLEAN """
                 if observation_num % save_observation == (save_observation-1):
+                    print("")
+                    print("~")
+                    print("~")
+                    print("~")
                     print("...Saving model intermediately...")
+                    print("~")
+                    print("~")
+                    print("~")
 
                     # Save in DIFF file
                     base_path, keras_extension = self.save_path.rsplit(".", 1)
@@ -197,6 +238,20 @@ class AtariAgent(object):
                     # SAVE BUFFER IN CASE OF CRASH
                     with open("replay_queue.pkl", "wb") as f:
                         pickle.dump(self.replay_queue, f)
+
+                    print("")
+
+                # Just show its working
+                if observation_num % spr_sm_print == 0:
+                    print("")
+                    print("Finished TRAINING iteration ", observation_num)
+                    print("")
+            else:
+                if observation_num % spr_sm_print == 0:
+                    print("")
+                    print("Not at min. Iteration = ", observation_num)
+                    print("Replay queue length ", self.replay_queue.size())
+                    print("")
 
             # Update trackers
             alive_frame += 1
@@ -316,9 +371,20 @@ class AtariAgent(object):
                     writer.writerow([i, ind_score])
                     print(" Saved score ", i+1, " = ", ind_score)
         
-        # Get and report averge score
-        ave_score = np.mean(scores) 
+        # Get and report score stats
+        ave_score = np.mean(scores)
         print("AVERAGE score = ", ave_score)
+
+        min_score = np.min(scores)
+        print("MIN score = ", min_score)
+
+        max_score = np.max(scores)
+        print("MAX score = ", max_score)
+
+        std_dev_score = np.std(scores)
+        print("SD score = ", std_dev_score)
+
+        
         
 
 

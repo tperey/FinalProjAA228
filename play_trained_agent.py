@@ -13,16 +13,17 @@ number_a = 6 # Check game documentation
 # model_path = "./adv_models/old_breakout_adv_c999.keras"
 #model_path = "./adv_models/breakout_adv_c6499.keras"
 #model_path = "./adv_models/breakout_adv_c3999.keras"
-model_path = "./UNDv3_models/UNDv3_c9999.keras"
+# model_path = "./UNDv3_models/UNDv3_c9999.keras"
+model_path = "./UNDv7_models/UNDv7_rr_c21249.keras"
 
-video_fold = "UNDv3_goodruns"
-video_pref = "k9_UNDv3_"
+video_fold = "UNDv7_goodruns"
+video_pref = "r2k100_UNDv7_"
 
 saveBool = True
 getScores = True
 
-save_thresh = 1000
-num_trials = 20
+save_thresh = 6000
+num_trials = 100
 
 """ Simulate 'n' save """
 breakout_agent = AtariAgent(game, number_a, model_path, 'rgb_array') # Instantiate

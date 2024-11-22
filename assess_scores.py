@@ -12,11 +12,12 @@ game = "ALE/UpNDown-v5"
 number_a = 6 # Check game documentation
 #model_path = "breakout_saved.keras" # Use for save_path and to load
 # model_path = "./adv_models/old_breakout_adv_c999.keras"
-model_path = "./UNDv3_models/UNDv3_c9999.keras"
+# model_path = "./UNDv3_models/UNDv3_c9999.keras"
+model_path = "./UNDv7_models/UNDv7_rr_c21249.keras"
 
-scorePath = "scores_UNDv3_c9999.csv"
+scorePath = "scores_UNDv7_100kv1.csv"
 
-num_trials = 20
+num_trials = 100
 
 """ Simulate 'n' score """
 breakout_agent = AtariAgent(game, number_a, model_path, 'rgb_array') # Instantiate

@@ -39,20 +39,30 @@ def simulate_random(game_env):
 env = gym.make(game_name, render_mode = 'rgb_array', full_action_space=False)
 
 # Get average score
-episode_num = 20
+episode_num = 100
 scores = np.zeros(episode_num)
 
 for i in range(episode_num):
     scores[i] = simulate_random(env)
 
-    score_path = game_name.split("/")[-1] + "_random_scores.csv"
+    score_path = game_name.split("/")[-1] + "_random_scores2.csv"
     with open(score_path, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([i, scores[i]])
         print(" Saved rand score ", i+1, " = ", scores[i])
 
+# Get and report score stats
 ave_score = np.mean(scores)
-print("Ave RAND score = ", ave_score)
+print("AVERAGE Rand score = ", ave_score)
+
+min_score = np.min(scores)
+print("MIN Rand score = ", min_score)
+
+max_score = np.max(scores)
+print("MAX Rand score = ", max_score)
+
+std_dev_score = np.std(scores)
+print("SD Rand score = ", std_dev_score)
 
 """ SAVE ONE VIDEO """
 # Create the game environment
